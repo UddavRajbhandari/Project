@@ -27,6 +27,7 @@ public:
     for this , if the tasks is more dominated by the tasks with VIP tasks then we can also increase the low priority task by 1. with this we can ensure that the task with low priority will also be meet.
     if the tasks have same priority sort the task with the task which is near to the deadline(completion) of the task
     */
+   void priority_arise(){}
     Task getNextTask() {
         if (!tasks.empty()) {
             Task nextTask = tasks.top();
