@@ -25,7 +25,7 @@ public:
 
     when there are many more priorities task but the one with low priority will not be completed  .
     for this , if the tasks is more dominated by the tasks with VIP tasks then we can also increase the low priority task by 1. with this we can ensure that the task with low priority will also be meet.
-    if the tasks have same priority sort the task with the task which is near to the deadline(completion) of the task
+    if the tasks have same priority sort the task with the task by insertion order
     */
    void priority_arise(){}
     Task getNextTask() {

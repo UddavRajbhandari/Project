@@ -7,10 +7,15 @@ struct Task {
     string name;
     int priority;
     int waitingTime; //New field to track waiting time
+    int insertionOrder;  // New field to track insertion order
     // Comparison function to create a max heap
     bool operator<(const Task& other) const {
+        // If priorities are equal,compare based on insertion order
+        if(priority == other.priority){
+            return insertionOrder > other.insertionOrder;
+        }
         //Introduce aging: Increase priority based on waiting time
-        int agedPriority = priority + waitingTime/10;
+        int agedPriority = priority - waitingTime/10;
         int otherAgedPriority = other.priority - other.waitingTime / 10;
         return agedPriority < otherAgedPriority;
     }
@@ -19,10 +24,12 @@ class TaskScheduler {
 private:
 
     priority_queue<Task> tasks;
+    int insertionCounter;
 
 public:
+    TaskScheduler(): insertionCounter(0){}
     void addTask(const string& name, int priority) {
-        tasks.emplace(Task{name, priority, 0});
+        tasks.emplace(Task{name, priority, 0,insertionCounter++});
     }
 
     Task getNextTask() {
@@ -32,7 +39,7 @@ public:
             return nextTask;
         } else {
             // Returning a default task when the queue is empty
-            return {"", 0,0};
+            return {"", 0,0,0};
         }
     }
     //Introduce dynamic priority adjustment: Update waiting time
