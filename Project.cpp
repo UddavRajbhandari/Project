@@ -82,8 +82,8 @@ int main() {
 
     
     // Getting and executing tasks based on priority
-   int executionCount = 0;
-    while (executionCount < 10) {
+   
+    while (true) {
         Task nextTask;
         nextTask= scheduler.getNextTask();
         if (!nextTask.name.empty()) {
@@ -92,7 +92,7 @@ int main() {
             cout << "No more tasks in the queue." << endl;
             break;
         }
-        executionCount++;
+        
         scheduler.updateWaitingTime();
     }
 
