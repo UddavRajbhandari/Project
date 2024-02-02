@@ -3,3 +3,4 @@ output/
 *.json
 Project.exe
 .vscode/
+testing.cpp
