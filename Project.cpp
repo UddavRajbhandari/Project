@@ -1,7 +1,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
-#include <stack>
+
 using namespace std;
 struct Task {
     string name;
@@ -28,17 +28,16 @@ class TaskScheduler {
 private:
     priority_queue<Task> tasks;
     int insertionCounter;
-    stack<priority_queue<Task>> undoStack;
-    stack<priority_queue<Task>> redoStack;
 
 public:
     TaskScheduler() : insertionCounter(0) {}
 
+    // Method to add a task with specified name, description, and priority
     void addTask(const string& name, const string& description, int priority) {
         tasks.emplace(Task{name, description, priority, 0, insertionCounter++, false});
-        saveState();
     }
 
+    // Method to interactively add a task by taking user input
     void addTaskInteractive() {
         string taskName, taskDescription;
         int taskPriority;
@@ -49,7 +48,7 @@ public:
         cout << "Enter task description: ";
         cin.ignore();
         getline(cin, taskDescription);
-
+    
         cout << "Enter task priority: ";
         cin >> taskPriority;
 
@@ -58,6 +57,7 @@ public:
         cout << "Task added successfully.\n";
     }
 
+    // Method to get the next task from the priority queue
     Task getNextTask() {
         if (!tasks.empty()) {
             Task nextTask = tasks.top();
@@ -68,6 +68,7 @@ public:
         }
     }
 
+    // Method to update waiting times for all tasks in the queue
     void updateWaitingTime() {
         priority_queue<Task> tempQueue;
 
@@ -78,10 +79,10 @@ public:
             tempQueue.push(task);
         }
 
-        tasks = move(tempQueue);
-        saveState();
+        tasks.swap(tempQueue);
     }
 
+    // Method to adjust the priority of a specific task
     void adjustPriority(const string& taskName, int newPriority) {
         priority_queue<Task> tempQueue;
 
@@ -96,10 +97,10 @@ public:
             tempQueue.push(task);
         }
 
-        tasks = move(tempQueue);
-        saveState();
+        tasks.swap(tempQueue);
     }
 
+    // Method to mark a task as completed
     void markTaskAsCompleted(const string& taskName) {
         priority_queue<Task> tempQueue;
 
@@ -114,35 +115,10 @@ public:
             tempQueue.push(task);
         }
 
-        tasks = move(tempQueue);
-        saveState();
+        tasks.swap(tempQueue);
     }
 
-    void undo() {
-        if (undoStack.size() > 1) { // Ensure there are at least two states to undo
-            redoStack.push(tasks);
-            undoStack.pop();
-            tasks = undoStack.top();
-        } else {
-            cout << "Cannot undo further.\n";
-        }
-    }
-
-    void redo() {
-        if (!redoStack.empty()) {
-            undoStack.push(tasks);
-            tasks = redoStack.top();
-            redoStack.pop();
-        } else {
-            cout << "Cannot redo further.\n";
-        }
-    }
-
-    void saveState() {
-        undoStack.push(tasks);
-        redoStack = stack<priority_queue<Task>>(); // Clear redo stack
-    }
-
+    // Method to display information about all tasks in the queue
     void displayAllTasks() const {
         if (tasks.empty()) {
             cout << "No tasks in the queue." << endl;
@@ -194,11 +170,9 @@ int main() {
         cout << "2. Update Waiting Times\n";
         cout << "3. Adjust Priority\n";
         cout << "4. Mark Task as Completed\n";
-        cout << "5. Undo\n";
-        cout << "6. Redo\n";
-        cout << "7. Display All Tasks\n";
-        cout << "8. Add New Task\n";
-        cout << "9. Exit\n";
+        cout << "5. Display All Tasks\n";
+        cout << "6. Add New Task\n";
+        cout << "7. Exit\n";
 
         int option;
         cin >> option;
@@ -243,20 +217,12 @@ int main() {
                 break;
             }
             case 5:
-                scheduler.undo();
-                cout << "Undo completed.\n";
-                break;
-            case 6:
-                scheduler.redo();
-                cout << "Redo completed.\n";
-                break;
-            case 7:
                 scheduler.displayAllTasks();
                 break;
-            case 8:
+            case 6:
                 scheduler.addTaskInteractive();
                 break;
-            case 9:
+            case 7:
                 return 0;
             default:
                 cout << "Invalid option. Please try again.\n";
