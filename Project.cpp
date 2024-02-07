@@ -3,6 +3,7 @@
 #include <string>
 
 using namespace std;
+
 struct Task {
     string name;
     string description;
@@ -10,6 +11,10 @@ struct Task {
     int waitingTime;
     int insertionOrder;
     bool completed;
+
+    // Constructor
+    Task(const string& n, const string& desc, int prio, int order, bool comp)
+        : name(n), description(desc), priority(prio), waitingTime(0), insertionOrder(order), completed(comp) {}
 
     // Comparison function to create a max heap with priority and insertion order
     bool operator<(const Task& other) const {
@@ -34,7 +39,8 @@ public:
 
     // Method to add a task with specified name, description, and priority
     void addTask(const string& name, const string& description, int priority) {
-        tasks.emplace(Task{name, description, priority, 0, insertionCounter++, false});
+        Task newTask(name, description, priority, insertionCounter++, false);
+        tasks.push(newTask);
     }
 
     // Method to interactively add a task by taking user input
@@ -48,7 +54,7 @@ public:
         cout << "Enter task description: ";
         cin.ignore();
         getline(cin, taskDescription);
-    
+
         cout << "Enter task priority: ";
         cin >> taskPriority;
 
@@ -64,12 +70,18 @@ public:
             tasks.pop();
             return nextTask;
         } else {
-            return {"", "", 0, 0, 0, false};
+            // Returning a default task with empty name and priority 0 to indicate no tasks available
+            return Task("", "", 0, 0, false);
         }
     }
 
     // Method to update waiting times for all tasks in the queue
     void updateWaitingTime() {
+        if (tasks.empty()) {
+            cout << "No tasks in the queue." << endl;
+            return;
+        }
+
         priority_queue<Task> tempQueue;
 
         while (!tasks.empty()) {
@@ -80,11 +92,18 @@ public:
         }
 
         tasks.swap(tempQueue);
+        cout << "Waiting times updated.\n";
     }
 
     // Method to adjust the priority of a specific task
     void adjustPriority(const string& taskName, int newPriority) {
+        if (tasks.empty()) {
+            cout << "No tasks in the queue." << endl;
+            return;
+        }
+
         priority_queue<Task> tempQueue;
+        bool taskFound = false;
 
         while (!tasks.empty()) {
             Task task = tasks.top();
@@ -92,17 +111,30 @@ public:
 
             if (task.name == taskName) {
                 task.priority = newPriority;
+                taskFound = true;
             }
 
             tempQueue.push(task);
         }
 
         tasks.swap(tempQueue);
+
+        if (taskFound) {
+            cout << "Priority adjusted.\n";
+        } else {
+            cout << "Task not found.\n";
+        }
     }
 
     // Method to mark a task as completed
     void markTaskAsCompleted(const string& taskName) {
+        if (tasks.empty()) {
+            cout << "No tasks in the queue." << endl;
+            return;
+        }
+
         priority_queue<Task> tempQueue;
+        bool taskFound = false;
 
         while (!tasks.empty()) {
             Task task = tasks.top();
@@ -110,12 +142,19 @@ public:
 
             if (task.name == taskName) {
                 task.completed = true;
+                taskFound = true;
             }
 
             tempQueue.push(task);
         }
 
         tasks.swap(tempQueue);
+
+        if (taskFound) {
+            cout << "Task marked as completed.\n";
+        } else {
+            cout << "Task not found.\n";
+        }
     }
 
     // Method to display information about all tasks in the queue
@@ -180,17 +219,16 @@ int main() {
         switch (option) {
             case 1: {
                 Task nextTask = scheduler.getNextTask();
-                if (!nextTask.name.empty()) {
-                    cout << "Executing '" << nextTask.name << "' with priority " << nextTask.priority << endl;
-                } else {
+                if (nextTask.name.empty()) {
                     cout << "No more tasks in the queue." << endl;
                     return 0;
+                } else {
+                    cout << "Executing '" << nextTask.name << "' with priority " << nextTask.priority << endl;
                 }
                 break;
             }
             case 2:
                 scheduler.updateWaitingTime();
-                cout << "Waiting times updated.\n";
                 break;
             case 3: {
                 string taskName;
@@ -203,7 +241,6 @@ int main() {
                 cin >> newPriority;
 
                 scheduler.adjustPriority(taskName, newPriority);
-                cout << "Priority adjusted.\n";
                 break;
             }
             case 4: {
@@ -213,7 +250,6 @@ int main() {
                 cin >> taskName;
 
                 scheduler.markTaskAsCompleted(taskName);
-                cout << "Task marked as completed.\n";
                 break;
             }
             case 5:
