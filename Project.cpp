@@ -1,7 +1,5 @@
 #include <iostream>
-#include <queue>
 #include <string>
-#include <stack>
 using namespace std;
 struct Task {
     string name;
@@ -11,161 +9,146 @@ struct Task {
     int insertionOrder;
     bool completed;
 
+    Task(const string& n, const string& desc, int prio, int order, bool comp)
+        : name(n), description(desc), priority(prio), waitingTime(0), insertionOrder(order), completed(comp) {}
+
     // Comparison function to create a max heap with priority and insertion order
-    bool operator<(const Task& other) const {
-        if (priority == other.priority) {
-            return insertionOrder > other.insertionOrder;
-        }
-
-        int agedPriority = priority - waitingTime / 10;
-        int otherAgedPriority = other.priority - other.waitingTime / 10;
-
-        return agedPriority < otherAgedPriority;
+   bool operator<(const Task& other) const {
+    // First compare by priority
+    if (priority != other.priority) {
+        return priority < other.priority;
     }
+    // If priorities are equal, compare by aged priority
+    int agedPriority = priority - waitingTime / 10;
+    int otherAgedPriority = other.priority - other.waitingTime / 10;
+    return agedPriority < otherAgedPriority;
+}
+
 };
 
-class TaskScheduler {
+class PriorityQueue {
 private:
-    priority_queue<Task> tasks;
-    int insertionCounter;
-    stack<priority_queue<Task>> undoStack;
-    stack<priority_queue<Task>> redoStack;
+    struct Node {
+        Task data;
+        Node* next;
+
+        Node(const Task& task) : data(task), next(nullptr) {}
+    };
+
+    Node* front;
 
 public:
-    TaskScheduler() : insertionCounter(0) {}
+    PriorityQueue() : front(nullptr) {}
 
-    void addTask(const string& name, const string& description, int priority) {
-        tasks.emplace(Task{name, description, priority, 0, insertionCounter++, false});
-        saveState();
-    }
+    void enqueue(const Task& task) {
+        Node* newNode = new Node(task);
 
-    void addTaskInteractive() {
-        string taskName, taskDescription;
-        int taskPriority;
-
-        cout << "Enter task name: ";
-        cin >> taskName;
-
-        cout << "Enter task description: ";
-        cin.ignore();
-        getline(cin, taskDescription);
-
-        cout << "Enter task priority: ";
-        cin >> taskPriority;
-
-        addTask(taskName, taskDescription, taskPriority);
-
-        cout << "Task added successfully.\n";
-    }
-
-    Task getNextTask() {
-        if (!tasks.empty()) {
-            Task nextTask = tasks.top();
-            tasks.pop();
-            return nextTask;
+        if (!front || task < front->data) {
+            newNode->next = front;
+            front = newNode;
         } else {
-            return {"", "", 0, 0, 0, false};
+            Node* current = front;
+            while (current->next && !(task < current->next->data)) {
+                current = current->next;
+            }
+            newNode->next = current->next;
+            current->next = newNode;
+        }
+    }
+
+    Task dequeue() {
+        if (isEmpty()) {
+            return Task("", "", 0, 0, false);
+        }
+
+        Node* temp = front;
+        Task frontTask = temp->data;
+        front = front->next;
+        delete temp;
+
+        return frontTask;
+    }
+
+    bool isEmpty() const {
+        return front == nullptr;
+    }
+
+    void adjustPriority(const string& taskName, int newPriority) {
+        Node* current = front;
+        while (current != nullptr) {
+            if (current->data.name == taskName) {
+                current->data.priority = newPriority;
+                break;
+            }
+            current = current->next;
+        }
+    }
+
+    void markTaskAsCompleted(const string& taskName) {
+        Node* current = front;
+        while (current != nullptr) {
+            if (current->data.name == taskName) {
+                current->data.completed = true;
+                break;
+            }
+            current = current->next;
         }
     }
 
     void updateWaitingTime() {
-        priority_queue<Task> tempQueue;
-
-        while (!tasks.empty()) {
-            Task task = tasks.top();
-            tasks.pop();
-            ++task.waitingTime;
-            tempQueue.push(task);
+        Node* current = front;
+        while (current != nullptr) {
+            current->data.waitingTime++;
+            current = current->next;
         }
-
-        tasks = move(tempQueue);
-        saveState();
+        // After updating waiting times, we may need to reorder the tasks
+        reorder();
     }
 
-    void adjustPriority(const string& taskName, int newPriority) {
-        priority_queue<Task> tempQueue;
+    // Reorder the tasks based on priority and insertion order
+    void reorder() {
+        Node* sorted = nullptr;
+        while (front != nullptr) {
+            Node* temp = front;
+            front = front->next;
 
-        while (!tasks.empty()) {
-            Task task = tasks.top();
-            tasks.pop();
-
-            if (task.name == taskName) {
-                task.priority = newPriority;
+            if (sorted == nullptr || temp->data < sorted->data) {
+                temp->next = sorted;
+                sorted = temp;
+            } else {
+                Node* current = sorted;
+                while (current->next && !(temp->data < current->next->data)) {
+                    current = current->next;
+                }
+                temp->next = current->next;
+                current->next = temp;
             }
-
-            tempQueue.push(task);
         }
-
-        tasks = move(tempQueue);
-        saveState();
+        front = sorted;
     }
 
-    void markTaskAsCompleted(const string& taskName) {
-        priority_queue<Task> tempQueue;
-
-        while (!tasks.empty()) {
-            Task task = tasks.top();
-            tasks.pop();
-
-            if (task.name == taskName) {
-                task.completed = true;
-            }
-
-            tempQueue.push(task);
-        }
-
-        tasks = move(tempQueue);
-        saveState();
-    }
-
-    void undo() {
-        if (undoStack.size() > 1) { // Ensure there are at least two states to undo
-            redoStack.push(tasks);
-            undoStack.pop();
-            tasks = undoStack.top();
-        } else {
-            cout << "Cannot undo further.\n";
-        }
-    }
-
-    void redo() {
-        if (!redoStack.empty()) {
-            undoStack.push(tasks);
-            tasks = redoStack.top();
-            redoStack.pop();
-        } else {
-            cout << "Cannot redo further.\n";
-        }
-    }
-
-    void saveState() {
-        undoStack.push(tasks);
-        redoStack = stack<priority_queue<Task>>(); // Clear redo stack
-    }
+    // Other methods...
 
     void displayAllTasks() const {
-        if (tasks.empty()) {
-            cout << "No tasks in the queue." << endl;
-        } else {
-            priority_queue<Task> tempQueue = tasks;
-            cout << "All Tasks in the Queue:" << endl;
-            while (!tempQueue.empty()) {
-                Task task = tempQueue.top();
-                tempQueue.pop();
-                cout << "Task Name: " << task.name << "\tPriority: " << task.priority
-                          << "\tWaiting Time: " << task.waitingTime << "\tCompleted: "
-                          << (task.completed ? "Yes" : "No") << endl;
-                cout << "Description: " << task.description << endl;
-                cout << "------------------------" << endl;
-            }
+        Node* current = front;
+        cout << "All Tasks in the Priority Queue:" << endl;
+        while (current != nullptr) {
+            Task task = current->data;
+            cout << "Task Name: " << task.name << "\tPriority: " << task.priority
+                      << "\tWaiting Time: " << task.waitingTime << "\tCompleted: "
+                      << (task.completed ? "Yes" : "No") << endl;
+            cout << "Description: " << task.description << endl;
+            cout << "------------------------" << endl;
+
+            current = current->next;
         }
     }
 };
 
 int main() {
-    TaskScheduler scheduler;
+    PriorityQueue taskQueue;
 
-    cout << "Welcome to the Task Scheduler!" << endl;
+    cout << "Welcome to the Priority Task Scheduler!" << endl;
 
     char addMore;
     do {
@@ -182,7 +165,7 @@ int main() {
         cout << "Enter task priority: ";
         cin >> taskPriority;
 
-        scheduler.addTask(taskName, taskDescription, taskPriority);
+        taskQueue.enqueue(Task{taskName, taskDescription, taskPriority, 0, false});
 
         cout << "Do you want to add more tasks? (y/n): ";
         cin >> addMore;
@@ -194,18 +177,16 @@ int main() {
         cout << "2. Update Waiting Times\n";
         cout << "3. Adjust Priority\n";
         cout << "4. Mark Task as Completed\n";
-        cout << "5. Undo\n";
-        cout << "6. Redo\n";
-        cout << "7. Display All Tasks\n";
-        cout << "8. Add New Task\n";
-        cout << "9. Exit\n";
+        cout << "5. Display All Tasks\n";
+        cout << "6. Add New Task\n";
+        cout << "7. Exit\n";
 
         int option;
         cin >> option;
 
         switch (option) {
             case 1: {
-                Task nextTask = scheduler.getNextTask();
+                Task nextTask = taskQueue.dequeue();
                 if (!nextTask.name.empty()) {
                     cout << "Executing '" << nextTask.name << "' with priority " << nextTask.priority << endl;
                 } else {
@@ -215,7 +196,7 @@ int main() {
                 break;
             }
             case 2:
-                scheduler.updateWaitingTime();
+                taskQueue.updateWaitingTime();
                 cout << "Waiting times updated.\n";
                 break;
             case 3: {
@@ -228,7 +209,7 @@ int main() {
                 cout << "Enter new priority: ";
                 cin >> newPriority;
 
-                scheduler.adjustPriority(taskName, newPriority);
+                taskQueue.adjustPriority(taskName, newPriority);
                 cout << "Priority adjusted.\n";
                 break;
             }
@@ -238,25 +219,33 @@ int main() {
                 cout << "Enter task name: ";
                 cin >> taskName;
 
-                scheduler.markTaskAsCompleted(taskName);
+                taskQueue.markTaskAsCompleted(taskName);
                 cout << "Task marked as completed.\n";
                 break;
             }
             case 5:
-                scheduler.undo();
-                cout << "Undo completed.\n";
+                taskQueue.displayAllTasks();
                 break;
-            case 6:
-                scheduler.redo();
-                cout << "Redo completed.\n";
+            case 6: {
+                string taskName, taskDescription;
+                int taskPriority;
+
+                cout << "Enter task name: ";
+                cin >> taskName;
+
+                cout << "Enter task description: ";
+                cin.ignore();
+                getline(cin, taskDescription);
+
+                cout << "Enter task priority: ";
+                cin >> taskPriority;
+
+                taskQueue.enqueue(Task{taskName, taskDescription, taskPriority, 0, false});
+
+                cout << "Task added successfully.\n";
                 break;
+            }
             case 7:
-                scheduler.displayAllTasks();
-                break;
-            case 8:
-                scheduler.addTaskInteractive();
-                break;
-            case 9:
                 return 0;
             default:
                 cout << "Invalid option. Please try again.\n";
