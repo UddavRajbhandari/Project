@@ -38,7 +38,7 @@ private:
     time_t startTime; // To track start time for waiting tasks
 
 public:
-    TaskScheduler() : insertionCounter(0), startTime(time(nullptr)) {}
+    TaskScheduler() : insertionCounter(0), startTime(time(NULL)) {}
 
     // Method to add a task with specified name, description, and priority
     void addTask(const string& name, const string& description, int priority) {
@@ -86,7 +86,7 @@ public:
         }
 
         // Calculate current time
-        time_t currentTime = time(nullptr);
+        time_t currentTime = time(NULL);
         double elapsedTime = difftime(currentTime, startTime);
 
         // Add 5 to waiting time for all tasks
