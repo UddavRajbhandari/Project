@@ -1,6 +1,7 @@
 #include <iostream>
 #include <queue>
 #include <string>
+#include <ctime> // For time tracking
 
 using namespace std;
 
@@ -33,9 +34,10 @@ class TaskScheduler {
 private:
     priority_queue<Task> tasks;
     int insertionCounter;
+    time_t startTime; // To track start time for waiting tasks
 
 public:
-    TaskScheduler() : insertionCounter(0) {}
+    TaskScheduler() : insertionCounter(0), startTime(time(nullptr)) {}
 
     // Method to add a task with specified name, description, and priority
     void addTask(const string& name, const string& description, int priority) {
@@ -82,12 +84,27 @@ public:
             return;
         }
 
+        // Calculate current time
+        time_t currentTime = time(nullptr);
+        double elapsedTime = difftime(currentTime, startTime);
+
+        // Add 5 to waiting time for all tasks
+        int timeIncrement = 5;
+
         priority_queue<Task> tempQueue;
 
         while (!tasks.empty()) {
             Task task = tasks.top();
             tasks.pop();
-            ++task.waitingTime;
+
+            // Update waiting time
+            task.waitingTime += timeIncrement;
+
+            // Increase priority by 5 if waiting for more than 5 units
+            if (task.waitingTime >= 5) {
+                task.priority += 5;
+            }
+
             tempQueue.push(task);
         }
 
