@@ -16,10 +16,10 @@ This option updates the waiting time of each task in the queue. The waiting time
 Users can adjust the priority of a specific task by providing the task name and the new priority.
 
 #### 5.Marking Task as Completed: 
-Users can mark a task as completed by providing the task name. This is used for indicating status and to make the tasks readable for user.
+Users can mark a task as completed by providing the task name. The completed tasks are move to another queue(not original that is priority queue) and deleted in the priority queue. User can interactively complete tasks as required where the tasks are inserted(at queue) and displayed.
 
 #### 6.Displaying All Tasks: 
-This option displays information about all tasks in the queue, including their name, priority, waiting time, completion status, and description.
+This option displays information about all tasks in the queue, including their name, priority, waiting time, completion status, and description along with the completed tasks for user support.
 
 #### 7.Adding New Task (Interactive): 
 Users can interactively add a new task by providing the task name, description, and priority.

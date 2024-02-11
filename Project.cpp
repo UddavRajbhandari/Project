@@ -13,11 +13,11 @@ struct Task {
     int insertionOrder;
     bool completed;
 
-    // Constructor
+    
     Task(const string& n, const string& desc, int prio, int order, bool comp)
         : name(n), description(desc), priority(prio), waitingTime(0), insertionOrder(order), completed(comp) {}
 
-    // Comparison function to create a max heap with priority and insertion order
+    
     bool operator<(const Task& other) const {
         if (priority == other.priority) {
             return insertionOrder > other.insertionOrder;
@@ -33,6 +33,7 @@ struct Task {
 class TaskScheduler {
 private:
     priority_queue<Task> tasks;
+    queue<Task> completedTasks;
     int insertionCounter;
     time_t startTime; // To track start time for waiting tasks
 
@@ -160,9 +161,10 @@ public:
             if (task.name == taskName) {
                 task.completed = true;
                 taskFound = true;
+                completedTasks.push(task); // Add completed task to the completed tasks queue
+            } else {
+                tempQueue.push(task); // Add non-completed tasks to the temporary queue
             }
-
-            tempQueue.push(task);
         }
 
         tasks.swap(tempQueue);
@@ -174,11 +176,19 @@ public:
         }
     }
 
+    // Method to clear completed tasks from the queue
+    void clearCompletedTasks() {
+        while (!completedTasks.empty()) {
+            completedTasks.pop();
+        }
+    }
+
     // Method to display information about all tasks in the queue
     void displayAllTasks() const {
-        if (tasks.empty()) {
+        if (tasks.empty() && completedTasks.empty()) {
             cout << "No tasks in the queue." << endl;
         } else {
+            // Display tasks in the queue
             priority_queue<Task> tempQueue = tasks;
             cout << "All Tasks in the Queue:" << endl;
             while (!tempQueue.empty()) {
@@ -187,6 +197,20 @@ public:
                 cout << "Task Name: " << task.name << "\tPriority: " << task.priority
                           << "\tWaiting Time: " << task.waitingTime << "\tCompleted: "
                           << (task.completed ? "Yes" : "No") << endl;
+                cout << "Description: " << task.description << endl;
+                cout << "------------------------" << endl;
+            }
+
+            // Display completed tasks without removing them from the queue
+            queue<Task> tempCompletedQueue = completedTasks;
+            cout<<endl;
+            cout << "Completed Tasks:" << endl;
+            cout<<endl;
+            while (!tempCompletedQueue.empty()) {
+                Task task = tempCompletedQueue.front();
+                tempCompletedQueue.pop();
+                cout << "Task Name: " << task.name << "\tPriority: " << task.priority
+                          << "\tWaiting Time: " << task.waitingTime << "\tCompleted: Yes" << endl;
                 cout << "Description: " << task.description << endl;
                 cout << "------------------------" << endl;
             }
@@ -276,6 +300,8 @@ int main() {
                 scheduler.addTaskInteractive();
                 break;
             case 7:
+                // Clear completed tasks from the queue before exiting
+                scheduler.clearCompletedTasks();
                 return 0;
             default:
                 cout << "Invalid option. Please try again.\n";
