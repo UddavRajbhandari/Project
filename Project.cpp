@@ -283,9 +283,9 @@ int main() {
             case 3: {
                 string taskName;
                 int newPriority;
-
+                cin.ignore();
                 cout << "Enter task name: ";
-                cin >> taskName;
+                getline(cin , taskName);
 
                 cout << "Enter new priority: ";
                 cin >> newPriority;
@@ -295,9 +295,9 @@ int main() {
             }
             case 4: {
                 string taskName;
-
+                cin.ignore();
                 cout << "Enter task name: ";
-                cin >> taskName;
+                getline(cin , taskName);
 
                 scheduler.markTaskAsCompleted(taskName);
                 break;
