@@ -2,17 +2,19 @@
 #include <queue>
 #include <string>
 #include <ctime> // For time tracking
+#include <limits> // For numeric_limits
 
 using namespace std;
 
 const int HIGH_PRIORITY_THRESHOLD = 50; // Threshold for high priority tasks
 const int HIGH_PRIORITY_TASK_COUNT_THRESHOLD = 10; // Threshold for number of high priority tasks
 const double WAITING_TIME_PRIORITY_FACTOR = 10.0; // Factor to adjust priority based on waiting time
+
 struct Task {
     string name;
     string description;
     int priority;
-    double waitingTime; 
+    double waitingTime;
     int insertionOrder;
     bool completed;
 
@@ -30,12 +32,14 @@ struct Task {
         return agedPriority < otherAgedPriority;
     }
 };
+
 class TaskComparator {
 public:
     bool operator()(const Task& t1, const Task& t2) const {
         return t1 < t2; // Use the overloaded less-than operator
     }
 };
+
 class TaskScheduler {
 private:
     priority_queue<Task, vector<Task>, TaskComparator> tasks; // Use custom comparator
@@ -45,6 +49,7 @@ private:
 
 public:
     TaskScheduler() : insertionCounter(0), startTime(time(NULL)) {}
+
     void addTask(const string& name, const string& description, int priority) {
         if (name.empty() || description.empty()) {
             cout << "Task name and description cannot be empty." << endl;
@@ -57,16 +62,21 @@ public:
         Task newTask(name, description, priority, insertionCounter++, false);
         tasks.push(newTask);
     }
+
     void addTaskInteractive() {
         string taskName, taskDescription;
         int taskPriority;
-        cin.ignore();
-        cout << "Enter task name: ";
-        getline(cin, taskName);
+
+        cout << "Enter task name (single word): ";
+        cin >> taskName;
         if (taskName.empty()) {
             cout << "Task name cannot be empty." << endl;
             return;
         }
+
+        // Clear the input buffer before reading the task description
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
         cout << "Enter task description: ";
         getline(cin, taskDescription);
         if (taskDescription.empty()) {
@@ -82,6 +92,7 @@ public:
         addTask(taskName, taskDescription, taskPriority);
         cout << "Task added successfully.\n";
     }
+
     Task getNextTask() {
         if (!tasks.empty()) {
             Task nextTask = tasks.top();
@@ -91,40 +102,42 @@ public:
             return Task("", "", 0, 0, false);
         }
     }
-void updateWaitingTime() {
-    if (tasks.empty()) {
-        cout << "No tasks in the queue." << endl;
-        return;
-    }  
-    time_t currentTime = time(NULL);
-    double elapsedTime = difftime(currentTime, startTime);
-    int timeIncrement = 5;
-    // Initialize a temporary queue to hold updated tasks
-    priority_queue<Task, vector<Task>, TaskComparator> tempQueue; 
-    // Get the count of high priority tasks
-    int highPriorityTaskCount = getHighPriorityTaskCount(); 
-    while (!tasks.empty()) {
-        Task task = tasks.top();
-        tasks.pop();
-        double waitingTime;
-        if (task.priority < HIGH_PRIORITY_THRESHOLD && highPriorityTaskCount >= HIGH_PRIORITY_TASK_COUNT_THRESHOLD) {
-            waitingTime = task.waitingTime + elapsedTime; // Increase waiting time for low priority tasks
-        } else {
-            waitingTime = task.waitingTime + timeIncrement; // Update waiting time for other tasks
-        }    
-        // Adjust priority based on waiting time
-        // Increase priority for tasks based on their waiting time
-        int priorityIncrement = static_cast<int>(waitingTime / WAITING_TIME_PRIORITY_FACTOR);
-        task.priority += priorityIncrement;     
-        // Update the task with the new waiting time
-        task.waitingTime = waitingTime;      
-        // Push the updated task into the temporary queue
-        tempQueue.push(task);
+
+    void updateWaitingTime() {
+        if (tasks.empty()) {
+            cout << "No tasks in the queue." << endl;
+            return;
+        }
+        time_t currentTime = time(NULL);
+        double elapsedTime = difftime(currentTime, startTime);
+        int timeIncrement = 5;
+        // Initialize a temporary queue to hold updated tasks
+        priority_queue<Task, vector<Task>, TaskComparator> tempQueue;
+        // Get the count of high priority tasks
+        int highPriorityTaskCount = getHighPriorityTaskCount();
+        while (!tasks.empty()) {
+            Task task = tasks.top();
+            tasks.pop();
+            double waitingTime;
+            if (task.priority < HIGH_PRIORITY_THRESHOLD && highPriorityTaskCount >= HIGH_PRIORITY_TASK_COUNT_THRESHOLD) {
+                waitingTime = task.waitingTime + elapsedTime; // Increase waiting time for low priority tasks
+            } else {
+                waitingTime = task.waitingTime + timeIncrement; // Update waiting time for other tasks
+            }
+            // Adjust priority based on waiting time
+            // Increase priority for tasks based on their waiting time
+            int priorityIncrement = static_cast<int>(waitingTime / WAITING_TIME_PRIORITY_FACTOR);
+            task.priority += priorityIncrement;
+            // Update the task with the new waiting time
+            task.waitingTime = waitingTime;
+            // Push the updated task into the temporary queue
+            tempQueue.push(task);
+        }
+        // Replace the original queue with the updated one
+        tasks.swap(tempQueue);
+        cout << "Waiting times updated.\n";
     }
-    // Replace the original queue with the updated one
-    tasks.swap(tempQueue);
-    cout << "Waiting times updated.\n";
-}
+
     void adjustPriority(const string& taskName, int newPriority) {
         if (tasks.empty()) {
             cout << "No tasks in the queue." << endl;
@@ -150,6 +163,7 @@ void updateWaitingTime() {
             cout << "Task not found.\n";
         }
     }
+
     void markTaskAsCompleted(const string& taskName) {
         if (tasks.empty()) {
             cout << "No tasks in the queue." << endl;
@@ -175,11 +189,13 @@ void updateWaitingTime() {
             cout << "Task not found.\n";
         }
     }
+
     void clearCompletedTasks() {
         while (!completedTasks.empty()) {
             completedTasks.pop();
         }
     }
+
     void displayAllTasks() const {
         if (tasks.empty() && completedTasks.empty()) {
             cout << "No tasks in the queue." << endl;
@@ -222,6 +238,7 @@ private:
         return count;
     }
 };
+
 int main() {
     TaskScheduler scheduler;
     cout << "Welcome to the Task Scheduler!" << endl;
@@ -229,13 +246,16 @@ int main() {
     do {
         string taskName, taskDescription;
         int taskPriority;
-        cout << "Enter task name: ";
-        cin.ignore();
-        getline(cin, taskName);
+        cout << "Enter task name (single word): ";
+        cin >> taskName;
         if (taskName.empty()) {
             cout << "Task name cannot be empty." << endl;
             continue;
         }
+
+        // Clear the input buffer before reading the task description
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
         cout << "Enter task description: ";
         getline(cin, taskDescription);
         if (taskDescription.empty()) {
@@ -252,7 +272,7 @@ int main() {
         cout << "Do you want to add more tasks? (y/n): ";
         cin >> addMore;
     } while (addMore != 'n' && addMore != 'N');
-    
+
     while (true) {
         cout << "\nChoose an option:\n";
         cout << "1. Get Next Task\n";
@@ -283,9 +303,9 @@ int main() {
             case 3: {
                 string taskName;
                 int newPriority;
-                cin.ignore();
-                cout << "Enter task name: ";
-                getline(cin , taskName);
+
+                cout << "Enter task name (single word): ";
+                cin >> taskName;
 
                 cout << "Enter new priority: ";
                 cin >> newPriority;
@@ -295,9 +315,8 @@ int main() {
             }
             case 4: {
                 string taskName;
-                cin.ignore();
-                cout << "Enter task name: ";
-                getline(cin , taskName);
+                cout << "Enter task name (single word): ";
+                cin >> taskName;
 
                 scheduler.markTaskAsCompleted(taskName);
                 break;
