@@ -5,124 +5,133 @@
 
 using namespace std;
 
+const int HIGH_PRIORITY_THRESHOLD = 50; // Threshold for high priority tasks
+const int HIGH_PRIORITY_TASK_COUNT_THRESHOLD = 10; // Threshold for number of high priority tasks
+const double WAITING_TIME_PRIORITY_FACTOR = 10.0; // Factor to adjust priority based on waiting time
 struct Task {
     string name;
     string description;
     int priority;
-    int waitingTime;
+    double waitingTime; 
     int insertionOrder;
     bool completed;
 
-    
     Task(const string& n, const string& desc, int prio, int order, bool comp)
         : name(n), description(desc), priority(prio), waitingTime(0), insertionOrder(order), completed(comp) {}
 
-    
     bool operator<(const Task& other) const {
         if (priority == other.priority) {
             return insertionOrder > other.insertionOrder;
         }
 
-        int agedPriority = priority - waitingTime / 10;
-        int otherAgedPriority = other.priority - other.waitingTime / 10;
+        int agedPriority = priority - static_cast<int>(waitingTime / 10); // Adjusted based on waiting time
+        int otherAgedPriority = other.priority - static_cast<int>(other.waitingTime / 10); // Adjusted based on waiting time
 
         return agedPriority < otherAgedPriority;
     }
 };
-
+class TaskComparator {
+public:
+    bool operator()(const Task& t1, const Task& t2) const {
+        return t1 < t2; // Use the overloaded less-than operator
+    }
+};
 class TaskScheduler {
 private:
-    priority_queue<Task> tasks;
+    priority_queue<Task, vector<Task>, TaskComparator> tasks; // Use custom comparator
     queue<Task> completedTasks;
     int insertionCounter;
     time_t startTime; // To track start time for waiting tasks
 
 public:
     TaskScheduler() : insertionCounter(0), startTime(time(NULL)) {}
-
-    // Method to add a task with specified name, description, and priority
     void addTask(const string& name, const string& description, int priority) {
+        if (name.empty() || description.empty()) {
+            cout << "Task name and description cannot be empty." << endl;
+            return;
+        }
+        if (priority < 0) {
+            cout << "Priority cannot be negative." << endl;
+            return;
+        }
         Task newTask(name, description, priority, insertionCounter++, false);
         tasks.push(newTask);
     }
-
-    // Method to interactively add a task by taking user input
     void addTaskInteractive() {
         string taskName, taskDescription;
         int taskPriority;
-
-        cout << "Enter task name: ";
-        cin >> taskName;
-
-        cout << "Enter task description: ";
         cin.ignore();
+        cout << "Enter task name: ";
+        getline(cin, taskName);
+        if (taskName.empty()) {
+            cout << "Task name cannot be empty." << endl;
+            return;
+        }
+        cout << "Enter task description: ";
         getline(cin, taskDescription);
-
+        if (taskDescription.empty()) {
+            cout << "Task description cannot be empty." << endl;
+            return;
+        }
         cout << "Enter task priority: ";
-        cin >> taskPriority;
-
+        while (!(cin >> taskPriority) || taskPriority < 0) {
+            cout << "Invalid input for priority, please enter a non-negative integer: ";
+            cin.clear();
+            while (cin.get() != '\n') {} // Clear the input buffer
+        }
         addTask(taskName, taskDescription, taskPriority);
-
         cout << "Task added successfully.\n";
     }
-
-    // Method to get the next task from the priority queue
     Task getNextTask() {
         if (!tasks.empty()) {
             Task nextTask = tasks.top();
             tasks.pop();
             return nextTask;
         } else {
-            // Returning a default task with empty name and priority 0 to indicate no tasks available
             return Task("", "", 0, 0, false);
         }
     }
-
-    // Method to update waiting times for all tasks in the queue
-    void updateWaitingTime() {
-        if (tasks.empty()) {
-            cout << "No tasks in the queue." << endl;
-            return;
-        }
-
-        // Calculate current time
-        time_t currentTime = time(NULL);
-        double elapsedTime = difftime(currentTime, startTime);
-
-        // Add 5 to waiting time for all tasks
-        int timeIncrement = 5;
-
-        priority_queue<Task> tempQueue;
-
-        while (!tasks.empty()) {
-            Task task = tasks.top();
-            tasks.pop();
-
-            // Update waiting time
-            task.waitingTime += timeIncrement;
-
-            // Increase priority by 5 if waiting for more than 5 units
-            if (task.waitingTime >= 5) {
-                task.priority += 5;
-            }
-
-            tempQueue.push(task);
-        }
-
-        tasks.swap(tempQueue);
-        cout << "Waiting times updated.\n";
+void updateWaitingTime() {
+    if (tasks.empty()) {
+        cout << "No tasks in the queue." << endl;
+        return;
+    }  
+    time_t currentTime = time(NULL);
+    double elapsedTime = difftime(currentTime, startTime);
+    int timeIncrement = 5;
+    // Initialize a temporary queue to hold updated tasks
+    priority_queue<Task, vector<Task>, TaskComparator> tempQueue; 
+    // Get the count of high priority tasks
+    int highPriorityTaskCount = getHighPriorityTaskCount(); 
+    while (!tasks.empty()) {
+        Task task = tasks.top();
+        tasks.pop();
+        double waitingTime;
+        if (task.priority < HIGH_PRIORITY_THRESHOLD && highPriorityTaskCount >= HIGH_PRIORITY_TASK_COUNT_THRESHOLD) {
+            waitingTime = task.waitingTime + elapsedTime; // Increase waiting time for low priority tasks
+        } else {
+            waitingTime = task.waitingTime + timeIncrement; // Update waiting time for other tasks
+        }    
+        // Adjust priority based on waiting time
+        // Increase priority for tasks based on their waiting time
+        int priorityIncrement = static_cast<int>(waitingTime / WAITING_TIME_PRIORITY_FACTOR);
+        task.priority += priorityIncrement;     
+        // Update the task with the new waiting time
+        task.waitingTime = waitingTime;      
+        // Push the updated task into the temporary queue
+        tempQueue.push(task);
     }
-
-    // Method to adjust the priority of a specific task
+    // Replace the original queue with the updated one
+    tasks.swap(tempQueue);
+    cout << "Waiting times updated.\n";
+}
     void adjustPriority(const string& taskName, int newPriority) {
         if (tasks.empty()) {
             cout << "No tasks in the queue." << endl;
             return;
         }
-
-        priority_queue<Task> tempQueue;
+        priority_queue<Task, vector<Task>, TaskComparator> tempQueue; // Use custom comparator
         bool taskFound = false;
-
         while (!tasks.empty()) {
             Task task = tasks.top();
             tasks.pop();
@@ -134,30 +143,23 @@ public:
 
             tempQueue.push(task);
         }
-
         tasks.swap(tempQueue);
-
         if (taskFound) {
             cout << "Priority adjusted.\n";
         } else {
             cout << "Task not found.\n";
         }
     }
-
-    // Method to mark a task as completed
     void markTaskAsCompleted(const string& taskName) {
         if (tasks.empty()) {
             cout << "No tasks in the queue." << endl;
             return;
         }
-
-        priority_queue<Task> tempQueue;
+        priority_queue<Task, vector<Task>, TaskComparator> tempQueue; // Use custom comparator
         bool taskFound = false;
-
         while (!tasks.empty()) {
             Task task = tasks.top();
             tasks.pop();
-
             if (task.name == taskName) {
                 task.completed = true;
                 taskFound = true;
@@ -166,84 +168,91 @@ public:
                 tempQueue.push(task); // Add non-completed tasks to the temporary queue
             }
         }
-
         tasks.swap(tempQueue);
-
         if (taskFound) {
             cout << "Task marked as completed.\n";
         } else {
             cout << "Task not found.\n";
         }
     }
-
-    // Method to clear completed tasks from the queue
     void clearCompletedTasks() {
         while (!completedTasks.empty()) {
             completedTasks.pop();
         }
     }
-
-    // Method to display information about all tasks in the queue
     void displayAllTasks() const {
         if (tasks.empty() && completedTasks.empty()) {
             cout << "No tasks in the queue." << endl;
         } else {
-            // Display tasks in the queue
-            priority_queue<Task> tempQueue = tasks;
+            priority_queue<Task, vector<Task>, TaskComparator> tempQueue = tasks; // Use custom comparator
             cout << "All Tasks in the Queue:" << endl;
             while (!tempQueue.empty()) {
                 Task task = tempQueue.top();
                 tempQueue.pop();
                 cout << "Task Name: " << task.name << "\tPriority: " << task.priority
-                          << "\tWaiting Time: " << task.waitingTime << "\tCompleted: "
-                          << (task.completed ? "Yes" : "No") << endl;
+                     << "\tWaiting Time: " << task.waitingTime << "\tCompleted: "
+                     << (task.completed ? "Yes" : "No") << endl;
                 cout << "Description: " << task.description << endl;
                 cout << "------------------------" << endl;
             }
 
-            // Display completed tasks without removing them from the queue
             queue<Task> tempCompletedQueue = completedTasks;
-            cout<<endl;
+            cout << endl;
             cout << "Completed Tasks:" << endl;
-            cout<<endl;
+            cout << endl;
             while (!tempCompletedQueue.empty()) {
                 Task task = tempCompletedQueue.front();
                 tempCompletedQueue.pop();
                 cout << "Task Name: " << task.name << "\tPriority: " << task.priority
-                          << "\tWaiting Time: " << task.waitingTime << "\tCompleted: Yes" << endl;
+                     << "\tWaiting Time: " << task.waitingTime << "\tCompleted: Yes" << endl;
                 cout << "Description: " << task.description << endl;
                 cout << "------------------------" << endl;
             }
         }
     }
-};
 
+private:
+    int getHighPriorityTaskCount() const {
+        int count = 0;
+        priority_queue<Task, vector<Task>, TaskComparator> tempQueue = tasks; // Use custom comparator
+        while (!tempQueue.empty() && tempQueue.top().priority >= HIGH_PRIORITY_THRESHOLD) {
+            tempQueue.pop();
+            count++;
+        }
+        return count;
+    }
+};
 int main() {
     TaskScheduler scheduler;
-
     cout << "Welcome to the Task Scheduler!" << endl;
-
     char addMore;
     do {
         string taskName, taskDescription;
         int taskPriority;
-
         cout << "Enter task name: ";
-        cin >> taskName;
-
-        cout << "Enter task description: ";
         cin.ignore();
+        getline(cin, taskName);
+        if (taskName.empty()) {
+            cout << "Task name cannot be empty." << endl;
+            continue;
+        }
+        cout << "Enter task description: ";
         getline(cin, taskDescription);
-
+        if (taskDescription.empty()) {
+            cout << "Task description cannot be empty." << endl;
+            continue;
+        }
         cout << "Enter task priority: ";
-        cin >> taskPriority;
-
+        while (!(cin >> taskPriority) || taskPriority < 0) {
+            cout << "Invalid input for priority, please enter a non-negative integer: ";
+            cin.clear();
+            while (cin.get() != '\n') {} // Clear the input buffer
+        }
         scheduler.addTask(taskName, taskDescription, taskPriority);
-
         cout << "Do you want to add more tasks? (y/n): ";
         cin >> addMore;
     } while (addMore != 'n' && addMore != 'N');
-
+    
     while (true) {
         cout << "\nChoose an option:\n";
         cout << "1. Get Next Task\n";
@@ -300,7 +309,6 @@ int main() {
                 scheduler.addTaskInteractive();
                 break;
             case 7:
-                // Clear completed tasks from the queue before exiting
                 scheduler.clearCompletedTasks();
                 return 0;
             default:

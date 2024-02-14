@@ -10,10 +10,10 @@ Users can add a new task by providing the task name, description, and priority. 
 Users can retrieve the next task to execute. The application will display the name and priority of the task with the highest priority in the queue.
 
 #### 3.Updating Waiting Times:
-This option updates the waiting time of each task in the queue. The waiting time increases by 5 for each task that remains in the queue along with there priorities.
+This option updates the waiting time of each task in the queue. The waiting time increases by 5 for each task that remains in the queue and if the count threshold exceeds then the waiting time increases as calculated per time.
 
 #### 4.Adjusting Priority: 
-Users can adjust the priority of a specific task by providing the task name and the new priority.
+Users can adjust the priority of a specific task by providing the task name and the new priority looking at the waitingTime of the tasks.
 
 #### 5.Marking Task as Completed: 
 Users can mark a task as completed by providing the task name. The completed tasks are move to another queue(not original that is priority queue) and deleted in the priority queue. User can interactively complete tasks as required where the tasks are inserted(at queue) and displayed.
